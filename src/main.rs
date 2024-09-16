@@ -1,3 +1,7 @@
+mod constants;
+
+use constants::CONSTANTS;
+
 use ggez::event::{self, EventHandler};
 use ggez::graphics::{self, Color};
 use ggez::input::keyboard::{self, KeyCode};
@@ -71,26 +75,28 @@ impl GameState {
     pub fn new() -> GameResult<GameState> {
         let mut state = GameState {
             ball: Ball {
-                pos: PositionVec2::new(400.0, 300.0),
-                vel: VelocityVec2::new(5.0, -5.0),
-                size: SizeVec2::new(10.0, 10.0),
+                pos: CONSTANTS.ball_start_pos,
+                vel: CONSTANTS.ball_start_vel,
+                size: CONSTANTS.ball_size,
             },
             paddle: Paddle {
-                pos: PositionVec2::new(350.0, 550.0),
-                size: SizeVec2::new(100.0, 20.0),
-                speed: 5.0,
+                pos: CONSTANTS.paddle_start_pos,
+                size: CONSTANTS.paddle_size,
+                speed: CONSTANTS.paddle_speed,
             },
             bricks: Vec::new(),
             game_over: false,
         };
+
         state.generate_bricks();
+
         Ok(state)
     }
 
     pub fn reset(&mut self) {
-        self.ball.pos = PositionVec2::new(400.0, 300.0);
-        self.ball.vel = VelocityVec2::new(5.0, -5.0);
-        self.paddle.pos = PositionVec2::new(350.0, 550.0);
+        self.ball.pos = CONSTANTS.ball_start_pos;
+        self.ball.vel = CONSTANTS.ball_start_vel;
+        self.paddle.pos = CONSTANTS.paddle_start_pos;
         self.bricks.clear();
         self.generate_bricks();
         self.game_over = false;
@@ -106,11 +112,16 @@ impl GameState {
             Color::CYAN,
         ];
 
-        for row in 0..5 {
-            for col in 0..10 {
+        for row in 0..CONSTANTS.brick_rows {
+            for col in 0..CONSTANTS.brick_columns {
                 let brick = Brick {
-                    pos: PositionVec2::new(col as f32 * 80.0 + 10.0, row as f32 * 30.0 + 50.0),
-                    size: SizeVec2::new(70.0, 20.0),
+                    pos: PositionVec2::new(
+                        col as f32 * (CONSTANTS.brick_size.width + CONSTANTS.brick_padding)
+                            + CONSTANTS.brick_padding,
+                        row as f32 * (CONSTANTS.brick_size.height + CONSTANTS.brick_padding)
+                            + CONSTANTS.brick_offset_top,
+                    ),
+                    size: CONSTANTS.brick_size,
                     color: *colors.choose(&mut rng).unwrap(),
                 };
                 self.bricks.push(brick);
@@ -286,7 +297,10 @@ fn main() -> GameResult {
     }
     let (ctx, event_loop) = cb
         .window_setup(ggez::conf::WindowSetup::default().title("Breakout"))
-        .window_mode(ggez::conf::WindowMode::default().dimensions(800.0, 600.0))
+        .window_mode(
+            ggez::conf::WindowMode::default()
+                .dimensions(CONSTANTS.window_width, CONSTANTS.window_height),
+        )
         .build()?;
 
     let state = GameState::new()?;
