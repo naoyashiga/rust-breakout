@@ -6,7 +6,6 @@ use ggez::event::{self, EventHandler};
 use ggez::graphics::{self, Color};
 use ggez::input::keyboard::{self, KeyCode};
 use ggez::{Context, GameResult};
-use rand::prelude::*;
 
 use ggez::ContextBuilder;
 
@@ -103,15 +102,6 @@ impl GameState {
     }
 
     fn generate_bricks(&mut self) {
-        let mut rng = rand::thread_rng();
-        let colors = [
-            Color::RED,
-            Color::GREEN,
-            Color::BLUE,
-            Color::YELLOW,
-            Color::CYAN,
-        ];
-
         for row in 0..CONSTANTS.brick_rows {
             for col in 0..CONSTANTS.brick_columns {
                 let brick = Brick {
@@ -122,7 +112,7 @@ impl GameState {
                             + CONSTANTS.brick_offset_top,
                     ),
                     size: CONSTANTS.brick_size,
-                    color: *colors.choose(&mut rng).unwrap(),
+                    color: CONSTANTS.brick_color,
                 };
                 self.bricks.push(brick);
             }

@@ -1,6 +1,6 @@
-use crate::{PositionVec2, VelocityVec2, SizeVec2};
+use crate::{PositionVec2, SizeVec2, VelocityVec2};
+use ggez::graphics::Color;
 use lazy_static::lazy_static;
-
 pub struct Constants {
     // Window dimensions
     pub window_width: f32,
@@ -22,6 +22,7 @@ pub struct Constants {
     pub brick_size: SizeVec2,
     pub brick_padding: f32,
     pub brick_offset_top: f32,
+    pub brick_color: Color,
 }
 
 impl Constants {
@@ -43,6 +44,7 @@ impl Constants {
             brick_size: SizeVec2::new(70.0, 20.0),
             brick_padding: 10.0,
             brick_offset_top: 50.0,
+            brick_color: Color::RED,
         }
     }
 }
