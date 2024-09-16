@@ -6,21 +6,57 @@ use rand::prelude::*;
 
 use ggez::ContextBuilder;
 
+#[derive(Debug, Clone, Copy)]
+struct PositionVec2 {
+    x: f32,
+    y: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SizeVec2 {
+    width: f32,
+    height: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct VelocityVec2 {
+    x: f32,
+    y: f32,
+}
+
+impl PositionVec2 {
+    fn new(x: f32, y: f32) -> Self {
+        PositionVec2 { x, y }
+    }
+}
+
+impl SizeVec2 {
+    fn new(width: f32, height: f32) -> Self {
+        SizeVec2 { width, height }
+    }
+}
+
+impl VelocityVec2 {
+    fn new(x: f32, y: f32) -> Self {
+        VelocityVec2 { x, y }
+    }
+}
+
 struct Ball {
-    pos: [f32; 2],
-    vel: [f32; 2],
-    size: f32,
+    pos: PositionVec2,
+    vel: VelocityVec2,
+    size: SizeVec2,
 }
 
 struct Paddle {
-    pos: [f32; 2],
-    size: [f32; 2],
+    pos: PositionVec2,
+    size: SizeVec2,
     speed: f32,
 }
 
 struct Brick {
-    pos: [f32; 2],
-    size: [f32; 2],
+    pos: PositionVec2,
+    size: SizeVec2,
     color: Color,
 }
 
@@ -32,132 +68,139 @@ struct GameState {
 }
 
 impl GameState {
-    fn generate_bricks(&mut self) {
-        let mut rng = rand::thread_rng();
-
-        let colors = [
-            graphics::Color::RED,
-            graphics::Color::GREEN,
-            graphics::Color::BLUE,
-            graphics::Color::YELLOW,
-            graphics::Color::CYAN,
-        ];
-
-        for row in 0..5 {
-            for col in 0..10 {
-                let brick = Brick {
-                    pos: [col as f32 * 80.0 + 10.0, row as f32 * 30.0 + 50.0],
-                    size: [70.0, 20.0],
-                    color: *colors.choose(&mut rng).unwrap(),
-                };
-
-                self.bricks.push(brick);
-            }
-        }
-    }
     pub fn new() -> GameResult<GameState> {
         let mut state = GameState {
             ball: Ball {
-                pos: [400.0, 300.0],
-                vel: [5.0, -5.0],
-                size: 10.0,
+                pos: PositionVec2::new(400.0, 300.0),
+                vel: VelocityVec2::new(5.0, -5.0),
+                size: SizeVec2::new(10.0, 10.0),
             },
             paddle: Paddle {
-                pos: [350.0, 550.0],
-                size: [100.0, 10.0],
+                pos: PositionVec2::new(350.0, 550.0),
+                size: SizeVec2::new(100.0, 20.0),
                 speed: 5.0,
             },
             bricks: Vec::new(),
             game_over: false,
         };
-
         state.generate_bricks();
         Ok(state)
     }
 
     pub fn reset(&mut self) {
-        self.ball.pos = [400.0, 300.0];
-        self.ball.vel = [5.0, -5.0];
-        self.paddle.pos = [350.0, 550.0];
+        self.ball.pos = PositionVec2::new(400.0, 300.0);
+        self.ball.vel = VelocityVec2::new(5.0, -5.0);
+        self.paddle.pos = PositionVec2::new(350.0, 550.0);
         self.bricks.clear();
         self.generate_bricks();
         self.game_over = false;
     }
 
-    fn check_ball_wall_collision(&mut self) {
-        if self.ball.pos[0] - self.ball.size / 2.0 <= 0.0
-            || self.ball.pos[0] + self.ball.size / 2.0 >= 800.0
-        {
-            self.ball.vel[0] = -self.ball.vel[0];
-        }
+    fn generate_bricks(&mut self) {
+        let mut rng = rand::thread_rng();
+        let colors = [
+            Color::RED,
+            Color::GREEN,
+            Color::BLUE,
+            Color::YELLOW,
+            Color::CYAN,
+        ];
 
-        if self.ball.pos[1] - self.ball.size / 2.0 <= 0.0 {
-            self.ball.vel[1] = -self.ball.vel[1];
+        for row in 0..5 {
+            for col in 0..10 {
+                let brick = Brick {
+                    pos: PositionVec2::new(col as f32 * 80.0 + 10.0, row as f32 * 30.0 + 50.0),
+                    size: SizeVec2::new(70.0, 20.0),
+                    color: *colors.choose(&mut rng).unwrap(),
+                };
+                self.bricks.push(brick);
+            }
+        }
+    }
+
+    fn check_ball_wall_collision(&mut self) {
+        if self.ball.pos.x - self.ball.size.width / 2.0 <= 0.0
+            || self.ball.pos.x + self.ball.size.width / 2.0 >= 800.0
+        {
+            self.ball.vel.x = -self.ball.vel.x;
+        }
+        if self.ball.pos.y - self.ball.size.height / 2.0 <= 0.0 {
+            self.ball.vel.y = -self.ball.vel.y;
         }
     }
 
     fn check_ball_paddle_collision(&mut self) {
-        let ball_bottom = self.ball.pos[1] + self.ball.size / 2.0;
-        let paddle_top = self.paddle.pos[1];
-        let ball_x = self.ball.pos[0];
-        let paddle_left = self.paddle.pos[0];
-        let paddle_right = self.paddle.pos[0] + self.paddle.size[0];
+        let ball_bottom = self.ball.pos.y + self.ball.size.height / 2.0;
+        let paddle_top = self.paddle.pos.y;
+        let ball_x = self.ball.pos.x;
+        let paddle_left = self.paddle.pos.x;
+        let paddle_right = self.paddle.pos.x + self.paddle.size.width;
 
         if ball_bottom >= paddle_top && ball_x >= paddle_left && ball_x <= paddle_right {
-            self.ball.vel[1] = -self.ball.vel[1];
-
-            let paddle_center = self.paddle.pos[0] + self.paddle.size[0] / 2.0;
-            let ball_offset = (ball_x - paddle_center) / (self.paddle.size[0] - 2.0);
-            self.ball.vel[0] += ball_offset * 2.0;
+            self.ball.vel.y = -self.ball.vel.y;
+            // Optional: Change ball angle based on where it hit the paddle
+            let paddle_center = paddle_left + self.paddle.size.width / 2.0;
+            let ball_offset = (ball_x - paddle_center) / (self.paddle.size.width / 2.0);
+            self.ball.vel.x += ball_offset * 2.0; // Amplify the angle change
         }
     }
 
     fn check_ball_brick_collision(&mut self) {
         self.bricks.retain(|brick| {
-            let collision = self.ball.pos[0] + self.ball.size / 2.0 >= brick.pos[0]
-                && self.ball.pos[0] - self.ball.size / 2.0 <= brick.pos[0] + brick.size[0]
-                && self.ball.pos[1] + self.ball.size / 2.0 >= brick.pos[1]
-                && self.ball.pos[1] - self.ball.size / 2.0 <= brick.pos[1] + brick.size[1];
+            let collision = self.ball.pos.x + self.ball.size.width / 2.0 > brick.pos.x
+                && self.ball.pos.x - self.ball.size.width / 2.0 < brick.pos.x + brick.size.width
+                && self.ball.pos.y + self.ball.size.height / 2.0 > brick.pos.y
+                && self.ball.pos.y - self.ball.size.height / 2.0 < brick.pos.y + brick.size.height;
 
             if collision {
-                if self.ball.pos[0] < brick.pos[0]
-                    || self.ball.pos[0] > brick.pos[0] + brick.size[0]
+                // Reverse ball direction
+                if self.ball.pos.x < brick.pos.x || self.ball.pos.x > brick.pos.x + brick.size.width
                 {
-                    self.ball.vel[0] = -self.ball.vel[0];
+                    self.ball.vel.x = -self.ball.vel.x;
                 } else {
-                    self.ball.vel[1] = -self.ball.vel[1];
+                    self.ball.vel.y = -self.ball.vel.y;
                 }
             }
 
-            !collision
-        })
+            !collision // Keep the brick if there's no collision
+        });
     }
 }
 
 impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         if !self.game_over {
-            self.ball.pos[0] += self.ball.vel[0];
-            self.ball.pos[1] += self.ball.vel[1];
+            // Move the ball
+            self.ball.pos.x += self.ball.vel.x;
+            self.ball.pos.y += self.ball.vel.y;
 
+            // Move the paddle
             if keyboard::is_key_pressed(ctx, KeyCode::Left) {
-                self.paddle.pos[0] -= self.paddle.speed;
+                self.paddle.pos.x -= self.paddle.speed;
             }
-
             if keyboard::is_key_pressed(ctx, KeyCode::Right) {
-                self.paddle.pos[0] += self.paddle.speed;
+                self.paddle.pos.x += self.paddle.speed;
             }
 
-            self.paddle.pos[0] = self.paddle.pos[0].max(0.0).min(800.0 - self.paddle.size[0]);
+            // Prevent the paddle from moving off-screen
+            self.paddle.pos.x = self
+                .paddle
+                .pos
+                .x
+                .max(0.0)
+                .min(800.0 - self.paddle.size.width);
 
+            // Check for collisions
             self.check_ball_wall_collision();
             self.check_ball_paddle_collision();
             self.check_ball_brick_collision();
 
-            if self.ball.pos[1] > 600.0 {
+            // Check for game over condition
+            if self.ball.pos.y > 600.0 {
                 self.game_over = true;
             }
         } else {
+            // Handle retry when game is over
             if keyboard::is_key_pressed(ctx, KeyCode::Space) {
                 self.reset();
             }
@@ -170,40 +213,44 @@ impl EventHandler for GameState {
         graphics::clear(ctx, [0.1, 0.2, 0.3, 1.0].into());
 
         if !self.game_over {
+            // Draw the ball
             let ball_rect = graphics::Rect::new(
-                self.ball.pos[0] - self.ball.size / 2.0,
-                self.ball.pos[1] - self.ball.size / 2.0,
-                self.ball.size,
-                self.ball.size,
+                self.ball.pos.x - self.ball.size.width / 2.0,
+                self.ball.pos.y - self.ball.size.height / 2.0,
+                self.ball.size.width,
+                self.ball.size.height,
             );
-
             let ball = graphics::Mesh::new_rectangle(
                 ctx,
                 graphics::DrawMode::fill(),
                 ball_rect,
-                graphics::Color::WHITE,
+                Color::WHITE,
             )?;
             graphics::draw(ctx, &ball, graphics::DrawParam::default())?;
 
+            // Draw the paddle
             let paddle_rect = graphics::Rect::new(
-                self.paddle.pos[0],
-                self.paddle.pos[1],
-                self.paddle.size[0],
-                self.paddle.size[1],
+                self.paddle.pos.x,
+                self.paddle.pos.y,
+                self.paddle.size.width,
+                self.paddle.size.height,
             );
-
             let paddle = graphics::Mesh::new_rectangle(
                 ctx,
                 graphics::DrawMode::fill(),
                 paddle_rect,
-                graphics::Color::WHITE,
+                Color::WHITE,
             )?;
             graphics::draw(ctx, &paddle, graphics::DrawParam::default())?;
 
+            // Draw the bricks
             for brick in &self.bricks {
-                let brick_rect =
-                    graphics::Rect::new(brick.pos[0], brick.pos[1], brick.size[0], brick.size[1]);
-
+                let brick_rect = graphics::Rect::new(
+                    brick.pos.x,
+                    brick.pos.y,
+                    brick.size.width,
+                    brick.size.height,
+                );
                 let brick_mesh = graphics::Mesh::new_rectangle(
                     ctx,
                     graphics::DrawMode::fill(),
@@ -213,19 +260,15 @@ impl EventHandler for GameState {
                 graphics::draw(ctx, &brick_mesh, graphics::DrawParam::default())?;
             }
         } else {
-            let game_over_text = graphics::Text::new("Game Over. Press Space to restart.");
+            // Draw game over screen
+            let game_over_text = graphics::Text::new("Game Over! Press SPACE to retry");
             let screen_center = graphics::screen_coordinates(ctx);
             let text_dimensions = game_over_text.dimensions(ctx);
-
             let position = [
                 screen_center.w / 2.0 - text_dimensions.w as f32 / 2.0,
                 screen_center.h / 2.0 - text_dimensions.h as f32 / 2.0,
             ];
-            graphics::draw(
-                ctx,
-                &game_over_text,
-                (position, 0.0, graphics::Color::WHITE),
-            )?;
+            graphics::draw(ctx, &game_over_text, (position, 0.0, Color::WHITE))?;
         }
 
         graphics::present(ctx)?;
