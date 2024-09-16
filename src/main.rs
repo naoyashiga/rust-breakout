@@ -1,13 +1,11 @@
-mod constants;
-
-use constants::CONSTANTS;
-
+use ggez::audio::{SoundSource, Source};
 use ggez::event::{self, EventHandler};
 use ggez::graphics::{self, Color};
 use ggez::input::keyboard::{self, KeyCode};
 use ggez::{Context, GameResult};
 
-use ggez::ContextBuilder;
+mod constants;
+use constants::CONSTANTS;
 
 #[derive(Debug, Clone, Copy)]
 struct PositionVec2 {
@@ -68,10 +66,12 @@ struct GameState {
     paddle: Paddle,
     bricks: Vec<Brick>,
     game_over: bool,
+    paddle_hit_sound: Source,
+    brick_hit_sound: Source,
 }
 
 impl GameState {
-    pub fn new() -> GameResult<GameState> {
+    pub fn new(ctx: &mut Context) -> GameResult<GameState> {
         let mut state = GameState {
             ball: Ball {
                 pos: CONSTANTS.ball_start_pos,
@@ -85,6 +85,8 @@ impl GameState {
             },
             bricks: Vec::new(),
             game_over: false,
+            paddle_hit_sound: Source::new(ctx, CONSTANTS.paddle_hit_sound_path)?,
+            brick_hit_sound: Source::new(ctx, CONSTANTS.brick_hit_sound_path)?,
         };
 
         state.generate_bricks();
@@ -121,7 +123,7 @@ impl GameState {
 
     fn check_ball_wall_collision(&mut self) {
         if self.ball.pos.x - self.ball.size.width / 2.0 <= 0.0
-            || self.ball.pos.x + self.ball.size.width / 2.0 >= 800.0
+            || self.ball.pos.x + self.ball.size.width / 2.0 >= CONSTANTS.window_width
         {
             self.ball.vel.x = -self.ball.vel.x;
         }
@@ -130,7 +132,7 @@ impl GameState {
         }
     }
 
-    fn check_ball_paddle_collision(&mut self) {
+    fn check_ball_paddle_collision(&mut self, ctx: &mut Context) -> GameResult<()> {
         let ball_bottom = self.ball.pos.y + self.ball.size.height / 2.0;
         let paddle_top = self.paddle.pos.y;
         let ball_x = self.ball.pos.x;
@@ -143,10 +145,15 @@ impl GameState {
             let paddle_center = paddle_left + self.paddle.size.width / 2.0;
             let ball_offset = (ball_x - paddle_center) / (self.paddle.size.width / 2.0);
             self.ball.vel.x += ball_offset * 2.0; // Amplify the angle change
+
+            // Play paddle hit sound
+            self.paddle_hit_sound.play(ctx)?;
         }
+        Ok(())
     }
 
-    fn check_ball_brick_collision(&mut self) {
+    fn check_ball_brick_collision(&mut self, ctx: &mut Context) -> GameResult<()> {
+        let mut collision_occurred = false;
         self.bricks.retain(|brick| {
             let collision = self.ball.pos.x + self.ball.size.width / 2.0 > brick.pos.x
                 && self.ball.pos.x - self.ball.size.width / 2.0 < brick.pos.x + brick.size.width
@@ -161,15 +168,22 @@ impl GameState {
                 } else {
                     self.ball.vel.y = -self.ball.vel.y;
                 }
+                collision_occurred = true;
             }
 
             !collision // Keep the brick if there's no collision
         });
+
+        if collision_occurred {
+            // Play brick hit sound
+            self.brick_hit_sound.play(ctx)?;
+        }
+        Ok(())
     }
 }
 
 impl EventHandler for GameState {
-    fn update(&mut self, ctx: &mut Context) -> GameResult {
+    fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         if !self.game_over {
             // Move the ball
             self.ball.pos.x += self.ball.vel.x;
@@ -189,15 +203,15 @@ impl EventHandler for GameState {
                 .pos
                 .x
                 .max(0.0)
-                .min(800.0 - self.paddle.size.width);
+                .min(CONSTANTS.window_width - self.paddle.size.width);
 
             // Check for collisions
             self.check_ball_wall_collision();
-            self.check_ball_paddle_collision();
-            self.check_ball_brick_collision();
+            self.check_ball_paddle_collision(ctx)?;
+            self.check_ball_brick_collision(ctx)?;
 
             // Check for game over condition
-            if self.ball.pos.y > 600.0 {
+            if self.ball.pos.y > CONSTANTS.window_height {
                 self.game_over = true;
             }
         } else {
@@ -210,7 +224,7 @@ impl EventHandler for GameState {
         Ok(())
     }
 
-    fn draw(&mut self, ctx: &mut Context) -> GameResult {
+    fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, [0.1, 0.2, 0.3, 1.0].into());
 
         if !self.game_over {
@@ -278,21 +292,14 @@ impl EventHandler for GameState {
 }
 
 fn main() -> GameResult {
-    let mut cb = ContextBuilder::new("breakout", "naoyashiga");
-
-    if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
-        let mut path = std::path::PathBuf::from(manifest_dir);
-        path.push("resources");
-        cb = cb.add_resource_path(path);
-    }
-    let (ctx, event_loop) = cb
-        .window_setup(ggez::conf::WindowSetup::default().title("Breakout"))
+    let (mut ctx, event_loop) = ggez::ContextBuilder::new("breakout", "Your Name")
+        .window_setup(ggez::conf::WindowSetup::default().title("Breakout!"))
         .window_mode(
             ggez::conf::WindowMode::default()
                 .dimensions(CONSTANTS.window_width, CONSTANTS.window_height),
         )
         .build()?;
 
-    let state = GameState::new()?;
-    event::run(ctx, event_loop, state);
+    let state = GameState::new(&mut ctx)?;
+    event::run(ctx, event_loop, state)
 }

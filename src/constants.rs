@@ -23,6 +23,9 @@ pub struct Constants {
     pub brick_padding: f32,
     pub brick_offset_top: f32,
     pub brick_color: Color,
+
+    pub paddle_hit_sound_path: &'static str,
+    pub brick_hit_sound_path: &'static str,
 }
 
 impl Constants {
@@ -45,6 +48,9 @@ impl Constants {
             brick_padding: 10.0,
             brick_offset_top: 50.0,
             brick_color: Color::RED,
+
+            paddle_hit_sound_path: "/sounds/hit.wav",
+            brick_hit_sound_path: "/sounds/hit.wav",
         }
     }
 }
