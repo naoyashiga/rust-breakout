@@ -68,6 +68,7 @@ struct GameState {
     game_over: bool,
     paddle_hit_sound: Source,
     brick_hit_sound: Source,
+    debug_mode: bool,
 }
 
 impl GameState {
@@ -87,6 +88,7 @@ impl GameState {
             game_over: false,
             paddle_hit_sound: Source::new(ctx, CONSTANTS.paddle_hit_sound_path)?,
             brick_hit_sound: Source::new(ctx, CONSTANTS.brick_hit_sound_path)?,
+            debug_mode: CONSTANTS.debug_mode,
         };
 
         state.generate_bricks();
@@ -212,7 +214,12 @@ impl EventHandler for GameState {
 
             // Check for game over condition
             if self.ball.pos.y > CONSTANTS.window_height {
-                self.game_over = true;
+                if self.debug_mode {
+                    self.ball.vel.y = -self.ball.vel.y;
+                    self.ball.pos.y = CONSTANTS.window_height - self.ball.size.height / 2.0;
+                } else {
+                    self.game_over = true;
+                }
             }
         } else {
             // Handle retry when game is over

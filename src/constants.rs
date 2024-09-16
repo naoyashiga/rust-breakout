@@ -26,6 +26,8 @@ pub struct Constants {
 
     pub paddle_hit_sound_path: &'static str,
     pub brick_hit_sound_path: &'static str,
+
+    pub debug_mode: bool,
 }
 
 impl Constants {
@@ -51,6 +53,9 @@ impl Constants {
 
             paddle_hit_sound_path: "/sounds/hit.wav",
             brick_hit_sound_path: "/sounds/hit.wav",
+
+
+            debug_mode: true
         }
     }
 }
