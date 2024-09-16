@@ -1,9 +1,8 @@
-use ggex::input::keyboard::{self, KeyCode};
 use ggez::event::{self, EventHandler};
 use ggez::graphics::{self, Color};
-use ggez::input::keyboard;
+use ggez::input::keyboard::{self, KeyCode};
 use ggez::{Context, GameResult};
-
+use rand::prelude::*;
 struct Ball {
     pos: [f32; 2],
     vel: [f32; 2],
@@ -29,8 +28,31 @@ struct GameState {
 }
 
 impl GameState {
-    fn new() -> GameState {
-        GameState {
+    fn generate_bricks(&mut self) {
+        let mut rng = rand::thread_rng();
+
+        let colors = [
+            graphics::Color::RED,
+            graphics::Color::GREEN,
+            graphics::Color::BLUE,
+            graphics::Color::YELLOW,
+            graphics::Color::CYAN,
+        ];
+
+        for row in 0..5 {
+            for col in 0..10 {
+                let brick = Brick {
+                    pos: [col as f32 * 80.0 + 10.0, row as f32 * 30.0 + 50.0],
+                    size: [70.0, 20.0],
+                    color: *colors.choose(&mut rng).unwrap(),
+                };
+
+                self.bricks.push(brick);
+            }
+        }
+    }
+    pub fn new() -> GameResult<GameState> {
+        let mut state = GameState {
             ball: Ball {
                 pos: [400.0, 300.0],
                 vel: [5.0, -5.0],
@@ -42,7 +64,9 @@ impl GameState {
                 speed: 5.0,
             },
             bricks: Vec::new(),
-        }
+        };
+
+        state.generate_bricks();
     }
 
     fn check_ball_wall_collision(&mut self) {
@@ -79,9 +103,11 @@ impl GameState {
                 && self.ball.pos[0] - self.ball.size / 2.0 <= brick.pos[0] + brick.size[0]
                 && self.ball.pos[1] + self.ball.size / 2.0 >= brick.pos[1]
                 && self.ball.pos[1] - self.ball.size / 2.0 <= brick.pos[1] + brick.size[1];
-            
+
             if collision {
-                if self.ball.pos[0] < brick.pos[0] || self.ball.pos[0] > brick.pos[0] + brick.size[0] {
+                if self.ball.pos[0] < brick.pos[0]
+                    || self.ball.pos[0] > brick.pos[0] + brick.size[0]
+                {
                     self.ball.vel[0] = -self.ball.vel[0];
                 } else {
                     self.ball.vel[1] = -self.ball.vel[1];
@@ -107,6 +133,10 @@ impl EventHandler for GameState {
         }
 
         self.paddle.pos[0] = self.paddle.pos[0].max(0.0).min(800.0 - self.paddle.size[0]);
+
+        self.check_ball_wall_collision();
+        self.check_ball_paddle_collision();
+        self.check_ball_brick_collision();
 
         Ok(())
     }
@@ -144,6 +174,18 @@ impl EventHandler for GameState {
         )?;
         graphics::draw(ctx, &paddle, graphics::DrawParam::default())?;
 
+        for brick in &self.bricks {
+            let brick_rect =
+                graphics::Rect::new(brick.pos[0], brick.pos[1], brick.size[0], brick.size[1]);
+
+            let brick_mesh = graphics::Mesh::new_rectangle(
+                ctx,
+                graphics::DrawMode::fill(),
+                brick_rect,
+                brick.color,
+            )?;
+            graphics::draw(ctx, &brick_mesh, graphics::DrawParam::default())?;
+        }
         graphics::present(ctx)?;
         Ok(())
     }
