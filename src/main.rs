@@ -3,6 +3,9 @@ use ggez::graphics::{self, Color};
 use ggez::input::keyboard::{self, KeyCode};
 use ggez::{Context, GameResult};
 use rand::prelude::*;
+
+use ggez::ContextBuilder;
+
 struct Ball {
     pos: [f32; 2],
     vel: [f32; 2],
@@ -67,6 +70,7 @@ impl GameState {
         };
 
         state.generate_bricks();
+        Ok(state)
     }
 
     fn check_ball_wall_collision(&mut self) {
@@ -189,4 +193,21 @@ impl EventHandler for GameState {
         graphics::present(ctx)?;
         Ok(())
     }
+}
+
+fn main() -> GameResult {
+    let mut cb = ContextBuilder::new("breakout", "naoyashiga");
+
+    if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+        let mut path = std::path::PathBuf::from(manifest_dir);
+        path.push("resources");
+        cb = cb.add_resource_path(path);
+    }
+    let (ctx, event_loop) = cb
+        .window_setup(ggez::conf::WindowSetup::default().title("Breakout"))
+        .window_mode(ggez::conf::WindowMode::default().dimensions(800.0, 600.0))
+        .build()?;
+
+    let state = GameState::new()?;
+    event::run(ctx, event_loop, state);
 }
